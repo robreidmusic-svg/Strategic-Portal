@@ -1,0 +1,212 @@
+{
+  "entities": {
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "A sales opportunity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "oppIdentifier": { "type": "string" },
+        "owner": { "type": "string" },
+        "customer": { "type": "string" },
+        "mrc": { "type": "number" },
+        "closeDate": { "type": "string" },
+        "stage": { "type": "string" },
+        "nextStep": { "type": "string" },
+        "unit": { "type": "string" }
+      },
+      "required": ["id", "oppIdentifier", "owner", "customer", "mrc", "closeDate", "stage", "unit"]
+    },
+    "Quota": {
+      "title": "Quota",
+      "description": "Monthly and annual quota for a business unit",
+      "type": "object",
+      "properties": {
+        "monthly": { "type": "number" },
+        "annual": { "type": "number" }
+      },
+      "required": ["monthly", "annual"]
+    },
+    "ChurnEntry": {
+      "title": "ChurnEntry",
+      "description": "A recorded churn item",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "mrc": { "type": "number" },
+        "month": { "type": "string" },
+        "unit": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["id", "customerName", "serviceType", "mrc", "month", "unit", "timestamp"]
+    },
+    "ForecastSubmission": {
+      "title": "ForecastSubmission",
+      "description": "A submitted forecast for a unit and month",
+      "type": "object",
+      "properties": {
+        "unit": { "type": "string" },
+        "month": { "type": "string" },
+        "low": { "type": "number" },
+        "upside": { "type": "number" },
+        "call": { "type": "number" },
+        "churnLow": { "type": "number" },
+        "churnCall": { "type": "number" },
+        "churnWorstCase": { "type": "number" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["unit", "month", "low", "upside", "call", "churnLow", "churnCall", "churnWorstCase", "timestamp"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile and role mapping",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "firstName": { "type": "string" },
+        "lastName": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["uid", "email", "firstName", "lastName", "role"]
+    },
+    "KnowledgeBase": {
+      "title": "Knowledge Base",
+      "description": "Program documentation and context",
+      "type": "object",
+      "properties": {
+        "content": { "type": "string" },
+        "updatedAt": { "type": "number" },
+        "updatedBy": { "type": "string" }
+      },
+      "required": ["content", "updatedAt"]
+    },
+    "ResearchInsight": {
+      "title": "Research Insight",
+      "description": "Cross-referenced market intelligence finding",
+      "type": "object",
+      "properties": {
+        "category": { "type": "string" },
+        "topic": { "type": "string" },
+        "summary": { "type": "string" },
+        "details": { "type": "string" },
+        "createdAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["category", "topic", "summary", "details", "createdAt", "updatedAt"]
+    },
+    "PendingEmail": {
+      "title": "Pending Email",
+      "description": "Raw email content waiting for processing",
+      "type": "object",
+      "properties": {
+        "subject": { "type": "string" },
+        "body": { "type": "string" },
+        "from": { "type": "string" },
+        "date": { "type": "string" },
+        "timestamp": { "type": "number" }
+      },
+      "required": ["subject", "body", "from", "date", "timestamp"]
+    },
+    "IngestionLog": {
+      "title": "Ingestion Log",
+      "description": "Log of ingestion attempts and errors",
+      "type": "object",
+      "properties": {
+        "timestamp": { "type": "number" },
+        "status": { "type": "string" },
+        "message": { "type": "string" },
+        "from": { "type": "string" },
+        "subject": { "type": "string" }
+      },
+      "required": ["timestamp", "status", "message"]
+    },
+    "WeeklyPriority": {
+      "title": "Weekly Priority",
+      "description": "Weekly strategic focus for a unit",
+      "type": "object",
+      "properties": {
+        "unitId": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "year": { "type": "number" },
+        "priorities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "text": { "type": "string" },
+              "status": { "type": "string", "enum": ["pending", "completed", "ongoing", "support_needed"] }
+            }
+          }
+        },
+        "submittedBy": { "type": "string" },
+        "submittedAt": { "type": "number" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["unitId", "weekNumber", "year", "priorities", "submittedBy", "submittedAt", "updatedAt"]
+    },
+    "NetworkOperator": {
+      "title": "Network Operator",
+      "description": "Information about a national or regional network operator in Europe",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "country": { "type": "string" },
+        "region": { "type": "string" },
+        "infrastructureType": { "type": "string" },
+        "summary": { "type": "string" },
+        "details": { "type": "string" },
+        "updatedAt": { "type": "number" }
+      },
+      "required": ["name", "country", "region", "infrastructureType", "summary", "details", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/knowledge_base/{docId}": {
+      "schema": "KnowledgeBase",
+      "description": "Central storage for program documentation"
+    },
+    "/opportunities/{oppId}": {
+      "schema": "Opportunity",
+      "description": "Global collection of opportunities"
+    },
+    "/quotas/{unitId}": {
+      "schema": "Quota",
+      "description": "Quotas per business unit"
+    },
+    "/forecastHistory/{submissionId}": {
+      "schema": "ForecastSubmission",
+      "description": "Historical forecast submissions"
+    },
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles and roles"
+    },
+    "/churn/{churnId}": {
+      "schema": "ChurnEntry",
+      "description": "Recorded churn records"
+    },
+    "/research_insights/{insightId}": {
+      "schema": "ResearchInsight",
+      "description": "Persistent repository of strategic market intelligence"
+    },
+    "/pending_emails/{emailId}": {
+      "schema": "PendingEmail",
+      "description": "Inbound queue for emailed articles"
+    },
+    "/ingestion_logs/{logId}": {
+      "schema": "IngestionLog",
+      "description": "Debug logs for external webhooks"
+    },
+    "/weeklyPriorities/{priorityId}": {
+      "schema": "WeeklyPriority",
+      "description": "Weekly units goals and status"
+    },
+    "/network_operators/{operatorId}": {
+      "schema": "NetworkOperator",
+      "description": "Knowledge base of European network operators"
+    }
+  }
+}

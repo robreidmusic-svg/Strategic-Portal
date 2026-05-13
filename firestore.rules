@@ -1,0 +1,296 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net: Default Deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: opportunities
+    // Fields:
+    //   - id: string (required)
+    //   - oppIdentifier: string (required, max 50)
+    //   - owner: string (required, max 100)
+    //   - customer: string (required, max 100)
+    //   - mrc: number (required, positive)
+    //   - closeDate: string (required, YYYY-MM-DD)
+    //   - stage: string (required, enum)
+    //   - nextStep: string (optional, max 500)
+    //   - unit: string (required, enum)
+    //
+    // Collection: quotas
+    // Document ID: unit name
+    // Fields:
+    //   - monthly: number (required, positive)
+    //   - annual: number (required, positive)
+    //
+    // Collection: forecastHistory
+    // Fields:
+    //   - unit: string (required)
+    //   - month: string (required, YYYY-MM)
+    //   - low: number (required)
+    //   - upside: number (required)
+    //   - call: number (required)
+    //   - timestamp: number (required)
+    //
+    // Collection: users
+    // Fields:
+    //   - uid: string (required)
+    //   - email: string (required)
+    //   - displayName: string (optional)
+    //   - role: string (required, 'admin' | 'user')
+    //
+    // Collection: knowledge_base
+    // Fields:
+    //   - content: string (required, large text)
+    //   - updatedAt: number (required)
+    //   - updatedBy: string (optional)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerified() {
+      return isSignedIn();
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    function isValidEmail(email) {
+      return email is string && email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidDateString(dateStr) {
+      return dateStr is string && dateStr.matches("^\\d{4}-\\d{2}-\\d{2}$");
+    }
+
+    function isValidMonthString(monthStr) {
+      return monthStr is string && monthStr.matches("^\\d{4}-\\d{2}$");
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidOpportunity(data) {
+      return data.oppIdentifier is string && data.oppIdentifier.size() < 200 &&
+             data.owner is string && data.owner.size() < 200 &&
+             data.customer is string && data.customer.size() < 200 &&
+             data.mrc is number &&
+             (data.closeDate is string && (data.closeDate == "" || data.closeDate.matches("^\\d{4}-\\d{2}-\\d{2}$"))) &&
+             data.stage is string &&
+             data.unit is string &&
+             data.forecastMonth is string && data.forecastMonth.matches("^\\d{4}-\\d{2}$") &&
+             data.isIncludedInCall is bool;
+    }
+
+    function isValidQuota(data) {
+      return data.monthly is number && data.monthly >= 0 &&
+             data.annual is number && data.annual >= 0;
+    }
+
+    function isValidForecast(data) {
+      return data.unit in ['Hyperscale', 'Strategic Wholesale', 'China/Apac', 'U.S AI'] &&
+             isValidMonthString(data.month) &&
+             data.low is number &&
+             data.upside is number &&
+             data.call is number &&
+             data.churnLow is number &&
+             data.churnCall is number &&
+             data.churnWorstCase is number &&
+             data.timestamp is number;
+    }
+
+    function isValidChurn(data) {
+      return data.customerName is string && data.customerName.size() > 0 &&
+             data.serviceType is string && data.serviceType.size() > 0 &&
+             data.mrc is number &&
+             isValidMonthString(data.month) &&
+             data.unit is string &&
+             data.timestamp is number;
+    }
+
+    function isValidUser(data) {
+      return data.role in ['admin', 'user'] &&
+             data.firstName is string && data.firstName.size() > 0 &&
+             data.lastName is string && data.lastName.size() > 0 &&
+             data.email is string && data.email.size() > 0;
+    }
+
+    function isValidKnowledgeBase(data) {
+      return data.content is string && data.content.size() > 0 &&
+             data.updatedAt is number;
+    }
+
+    function isValidResearchInsight(data) {
+      return data.category is string &&
+             data.topic is string &&
+             data.summary is string &&
+             data.details is string &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidWeeklyPriority(data) {
+      return data.unitId is string &&
+             data.weekNumber is number &&
+             data.year is number &&
+             data.priorities is list &&
+             data.priorities.size() == 3 &&
+             data.submittedBy is string &&
+             data.submittedAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidNetworkOperator(data) {
+      return data.name is string && data.name.size() > 0 &&
+             data.country is string &&
+             data.region is string &&
+             data.infrastructureType is string &&
+             data.summary is string &&
+             data.details is string &&
+             data.updatedAt is number;
+    }
+
+    function isValidKnowledgeNode(data) {
+      return data.title is string && data.title.size() > 0 && data.title.size() <= 120 &&
+             data.type in ['operator', 'infrastructure', 'market', 'regulatory', 'commercial'] &&
+             data.category is string &&
+             data.summary is string &&
+             data.body is string &&
+             data.source is string &&
+             data.createdAt is number &&
+             data.updatedAt is number;
+    }
+
+    function isValidResearchProposal(data) {
+      return data.topic is string && data.topic.size() > 0 &&
+             data.source is string && data.source.size() > 0 &&
+             data.sourceUrl is string &&
+             data.rationale is string &&
+             data.proposedQuestion is string &&
+             data.scope in ['Quick', 'Deep', 'Exhaustive'] &&
+             data.estimatedCost in ['Low', 'Medium', 'High'] &&
+             data.status in ['pending', 'approved', 'denied'] &&
+             data.createdAt is number;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /opportunities/{oppId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isVerified() && isValidId(oppId) && isValidOpportunity(request.resource.data);
+      allow update: if isVerified() && isValidId(oppId) && (isAdmin() || (isValidOpportunity(request.resource.data) && request.resource.data.oppIdentifier == resource.data.oppIdentifier));
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /quotas/{unitId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow write: if isVerified() && isAdmin() && isValidId(unitId) && isValidQuota(request.resource.data);
+    }
+
+    match /forecastHistory/{submissionId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isVerified() && isValidId(submissionId) && isValidForecast(request.resource.data);
+      allow update: if isVerified() && isAdmin() && isValidId(submissionId) && isValidForecast(request.resource.data);
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isOwner(userId) && isValidId(userId) && isValidUser(request.resource.data); // isOwner already implies isSignedIn
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /knowledge_base/{docId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow write: if isVerified() && isAdmin() && isValidId(docId) && isValidKnowledgeBase(request.resource.data);
+    }
+
+    match /churn/{churnId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isVerified() && isValidId(churnId) && isValidChurn(request.resource.data);
+      allow update: if isVerified() && isValidId(churnId) && isValidChurn(request.resource.data);
+      allow delete: if isVerified() && isValidId(churnId);
+    }
+
+    match /research_insights/{insightId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create, update: if isVerified() && isValidId(insightId) && isValidResearchInsight(request.resource.data);
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /pending_emails/{emailId} {
+      // Accessible by authenticated users for processing and deletion
+      allow read, list, delete: if isSignedIn();
+      // Creation reserved for server-side Admin SDK
+      allow create: if false;
+    }
+
+    match /weeklyPriorities/{priorityId} {
+      allow get, list: if isSignedIn();
+      allow create: if isVerified() && isValidId(priorityId) && isValidWeeklyPriority(request.resource.data);
+      allow update: if isVerified() && isValidId(priorityId) && isValidWeeklyPriority(request.resource.data);
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /network_operators/{operatorId} {
+      allow get, list: if isSignedIn();
+      allow create, update: if isVerified() && isValidId(operatorId) && isValidNetworkOperator(request.resource.data);
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /knowledge_nodes/{nodeId} {
+      allow read: if isSignedIn();
+      allow write: if false; // Reserved for server-side Admin SDK
+    }
+
+    match /research_proposals/{proposalId} {
+      allow get, list: if isSignedIn();
+      allow create: if isVerified() && isValidResearchProposal(request.resource.data);
+      allow update: if isVerified() && isValidResearchProposal(request.resource.data);
+      allow delete: if isVerified() && isAdmin();
+    }
+
+    match /ingestion_logs/{logId} {
+      allow get: if isSignedIn();
+      allow list: if isAdmin();
+      allow create: if isSignedIn();
+      allow update, delete: if isAdmin();
+    }
+  }
+}

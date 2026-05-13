@@ -1,0 +1,8 @@
+{
+  "firestore": [
+    {
+      "target": "aistudio",
+      "rules": "firestore.rules"
+    }
+  ]
+}
