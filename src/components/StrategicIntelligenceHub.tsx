@@ -30,6 +30,14 @@ interface UploadedDoc {
 
 type HubMode = 'auditor' | 'retention' | 'predictor' | null;
 
+interface MaintenanceAlert {
+  id: string;
+  severity: 'warning' | 'critical';
+  message: string;
+  timestamp: number;
+  resolved: boolean;
+}
+
 export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?: HubMode }) {
   const { knowledgeBaseContent, legalKnowledgeBaseContent, portalUser: realPortalUser } = useApp();
   const portalUser = realPortalUser || { uid: 'debug', firstName: 'Rob', lastName: 'Reid', email: 'rob.reid@zayo.internal', role: 'admin' };
@@ -137,6 +145,20 @@ export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?:
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [activeAlerts, setActiveAlerts] = useState<MaintenanceAlert[]>([]);
+
+  // Maintenance Alerts Listener
+  useEffect(() => {
+    const q = query(collection(db, "maintenance_alerts"), where("resolved", "==", false), orderBy("timestamp", "desc"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const alerts = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as MaintenanceAlert[];
+      setActiveAlerts(alerts);
+    }, (error) => {
+      if (error.code !== 'permission-denied') console.error("Alerts listener error:", error);
+    });
+    return () => unsubscribe();
+  }, []);
 
 
 
@@ -613,6 +635,52 @@ export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?:
   return (
     <div className="flex flex-col items-center justify-start min-h-screen p-4 lg:p-8 font-sans bg-app-bg relative" data-theme="paper">
       <div className="paper-texture" />
+      
+      {/* Maintenance Alert Banner */}
+      <AnimatePresence>
+        {activeAlerts.length > 0 && (
+          <motion.div 
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            className="w-full mb-6 relative z-50"
+          >
+            <div className={cn(
+              "px-6 py-4 rounded-2xl flex items-center justify-between border shadow-lg",
+              activeAlerts.some(a => a.severity === 'critical') 
+                ? "bg-rose-50 border-rose-200 text-rose-900" 
+                : "bg-amber-50 border-amber-200 text-amber-900"
+            )}>
+              <div className="flex items-center gap-4">
+                <div className={cn(
+                  "p-2 rounded-xl",
+                  activeAlerts.some(a => a.severity === 'critical') ? "bg-rose-200" : "bg-amber-200"
+                )}>
+                  <Zap size={20} className={activeAlerts.some(a => a.severity === 'critical') ? "animate-pulse" : ""} />
+                </div>
+                <div>
+                  <h4 className="text-[11px] font-black uppercase tracking-widest">Maintenance System: {activeAlerts.some(a => a.severity === 'critical') ? 'CRITICAL FAILURE' : 'SYSTEM WARNING'}</h4>
+                  <p className="text-[10px] font-bold opacity-80 mt-0.5">{activeAlerts[0].message} {activeAlerts.length > 1 && `(+${activeAlerts.length - 1} more)`}</p>
+                </div>
+              </div>
+              <button 
+                onClick={async () => {
+                  for (const alert of activeAlerts) {
+                    await updateKnowledgeNode(alert.id, { resolved: true }, "maintenance_alerts" as any); // hacky way to use existing service if it supports it, or just use firebase doc directly
+                    // Better: direct firebase call
+                    const { doc, updateDoc } = await import('firebase/firestore');
+                    await updateDoc(doc(db, "maintenance_alerts", alert.id), { resolved: true });
+                  }
+                }}
+                className="px-4 py-2 bg-white/50 hover:bg-white rounded-xl text-[9px] font-black uppercase tracking-widest transition-all"
+              >
+                Acknowledge All
+              </button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="w-full py-8 lg:py-12 px-4 relative z-10">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-6">

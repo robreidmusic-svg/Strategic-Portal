@@ -185,6 +185,51 @@ async function startServer() {
     }
   });
 
+  // Maintenance Route: Allows the agent to trigger audits and fixes via the server's Admin SDK
+  app.post("/api/maintenance/run", async (req, res) => {
+    const { key, tasks } = req.body;
+    const webhookKey = process.env.INGESTION_WEBHOOK_KEY;
+    
+    if (webhookKey && key && key !== webhookKey) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+
+    try {
+      const results: any = {};
+      
+      if (tasks.includes("integrity")) {
+        console.log("[Maintenance] Running Integrity Audit...");
+        const snapshot = await db.collection("opportunities").get();
+        let fixCount = 0;
+        for (const doc of snapshot.docs) {
+          const data = doc.data();
+          const updates: any = {};
+          if (!data.stage) updates.stage = "Lead";
+          if (data.mrc === undefined) updates.mrc = 0;
+          if (Object.keys(updates).length > 0) {
+            await doc.ref.update(updates);
+            fixCount++;
+          }
+        }
+        results.integrity = { status: "ok", fixed: fixCount };
+      }
+
+      if (tasks.includes("cleanup-alerts")) {
+        console.log("[Maintenance] Cleaning up old alerts...");
+        const alerts = await db.collection("maintenance_alerts").where("resolved", "==", true).get();
+        const batch = db.batch();
+        alerts.docs.forEach((d: any) => batch.delete(d.ref));
+        await batch.commit();
+        results.cleanup = { status: "ok", deleted: alerts.size };
+      }
+
+      res.json({ status: "ok", results });
+    } catch (e: any) {
+      console.error("[Maintenance] Error:", e);
+      res.status(500).json({ error: e.message });
+    }
+  });
+
   app.get("/api/ingestion-diagnostics", async (req, res) => {
     try {
       if (!db) return res.status(500).json({ error: "DB not initialized" });
