@@ -11,6 +11,7 @@ import { AccountPlanBuilder } from './components/AccountPlanBuilder';
 import { FinancialModelCalculator } from './components/FinancialModelCalculator';
 import { AdminPanel } from './components/AdminPanel';
 import { StrategicIntelligenceHub } from './components/StrategicIntelligenceHub';
+import { ContentLibrary } from './components/ContentLibrary';
 import { QuoteBuilder } from './components/QuoteBuilder';
 import NetworkVisualizer from './components/NetworkVisualizer';
 import { Login } from './components/Login';
@@ -46,18 +47,6 @@ function AppContent() {
         "flex-1 transition-all duration-300 min-h-[calc(100vh-theme(spacing.12))] relative",
         "lg:ml-64 p-4 md:p-8 lg:p-12 bg-white rounded-[32px] shadow-[0_10px_25px_-5px_rgba(0,0,0,0.05)] md:mx-4"
       )}>
-        {/* Global Sign Out Button */}
-        <div className="absolute top-4 right-4 md:top-8 md:right-8 lg:top-12 lg:right-12 z-10 no-print">
-          <button
-            onClick={logout}
-            className="flex items-center gap-2 px-6 py-2 bg-[#282828] text-white text-[10px] font-bold uppercase tracking-widest hover:bg-[#F29023] transition-all rounded-full"
-            title="Secure Sign Out"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
-        </div>
-
         <div className={cn(
           "mx-auto",
           activeSection.startsWith('intel-hub') ? "max-w-[1600px]" : "max-w-7xl"
@@ -70,6 +59,7 @@ function AppContent() {
           {activeSection === 'deal-metrics-agent' && <FinancialModelCalculator />}
           {activeSection === 'network-visualizer' && <NetworkVisualizer />}
           {activeSection === 'quote-builder' && <QuoteBuilder />}
+          {activeSection === 'content-library' && <ContentLibrary />}
           {activeSection === 'admin' && <AdminPanel />}
         </div>
       </main>

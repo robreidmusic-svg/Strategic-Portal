@@ -292,5 +292,10 @@ service cloud.firestore {
       allow create: if isSignedIn();
       allow update, delete: if isAdmin();
     }
+
+    match /content_library/{folderId} {
+      allow read: if isSignedIn();
+      allow write: if isVerified() && isAdmin();
+    }
   }
 }

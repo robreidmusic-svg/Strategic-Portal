@@ -82,7 +82,7 @@ async function startServer() {
     try {
       // Minimal connectivity test using the production-aliased model
       const testResponse = await (ai as any).models.generateContent({
-        model: "gemini-2.0-flash",
+        model: "gemini-1.5-pro-002",
         contents: [{ role: "user", parts: [{ text: "hi" }] }]
       });
 

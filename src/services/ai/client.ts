@@ -26,27 +26,27 @@ export const ai = {
 
       const data = await response.json();
       return data;
-    },
-    interactions: {
-      create: async (params: any) => {
-        const response = await fetch('/api/gemini/createInteraction', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(params),
-        });
+    }
+  },
+  interactions: {
+    create: async (params: any) => {
+      const response = await fetch('/api/gemini/createInteraction', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(params),
+      });
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const error = new Error(errData.error || `Gemini Interaction Error: ${response.status} ${response.statusText}`);
-          (error as any).status = response.status;
-          throw error;
-        }
-
-        const data = await response.json();
-        return data;
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        const error = new Error(errData.error || `Gemini Interaction Error: ${response.status} ${response.statusText}`);
+        (error as any).status = response.status;
+        throw error;
       }
+
+      const data = await response.json();
+      return data;
     }
   }
 };

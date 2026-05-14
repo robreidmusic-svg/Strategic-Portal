@@ -18,6 +18,7 @@ export function Sidebar({ activeSection, setActiveSection }: SidebarProps) {
     { id: 'deal-metrics-agent', label: 'Metrics Engine', icon: FileText, color: 'text-archival-terracotta', activeStyle: 'bg-archival-terracotta text-white' },
     { id: 'intel-hub-retention', label: 'Retention Case Vault', icon: Scale, color: 'text-archival-sage', activeStyle: 'bg-archival-sage text-white' },
     { id: 'intel-hub-predictor', label: 'Broggo Neural Feed', icon: Globe, color: 'text-archival-terracotta', activeStyle: 'bg-archival-terracotta text-white' },
+    { id: 'content-library', label: 'Content Library', icon: ScrollText, color: 'text-archival-sage', activeStyle: 'bg-archival-sage text-white' },
     ...(adminMode ? [{ id: 'admin', label: 'System Admin', icon: Settings }] : []),
   ];
 
