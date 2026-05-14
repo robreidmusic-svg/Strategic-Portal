@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { Send, Sparkles, Loader2, BookOpen, ShieldCheck, FileText, Upload, Trash2, Scale, Mail, Globe, Search, ArrowRight, Zap, CheckCircle2, Copy, FileDown, Square, ChevronDown, ChevronRight, X, RefreshCw, Brain } from 'lucide-react';
+import { Send, Sparkles, Loader2, BookOpen, ShieldCheck, FileText, Upload, Trash2, Scale, Mail, Globe, Search, ArrowRight, Zap, CheckCircle2, Copy, FileDown, Square, ChevronDown, ChevronRight, X, RefreshCw, Brain, Plus } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { chatWithBrilliantBasics, chatWithCommercialCounsel, researchMarketIntelligence, auditResearchKnowledge, processIngestedEmail, processIngestedLink, processIngestedFile, processIngestedCSV, runAutonomousEvolution, processIngestedText } from '../services/geminiService';
 import { getKnowledgeNodes, ingestKnowledgeNode, type KnowledgeNode, globalNeuralResync, exportLegacyManifest, clearLegacyData, updateKnowledgeNode, deleteKnowledgeNode, batchNormaliseKnowledge } from '../services/researchService';
