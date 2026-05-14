@@ -45,11 +45,42 @@ async function auditProposals(db: any) {
   console.log(`✅ Proposals Audit Complete. Fixed: ${fixCount}`);
 }
 
+async function takeForecastSnapshots(db: any) {
+  const today = new Date();
+  // Only take snapshots on Sundays (0) to create a clean weekly timeline
+  if (today.getDay() !== 0) {
+    console.log("📅 Skipping Forecast Snapshot (Not Sunday).");
+    return;
+  }
+
+  console.log("📸 Taking Weekly Forecast Snapshots...");
+  const units = ['Hyperscale', 'Strategic Wholesale', 'China/Apac', 'U.S AI'];
+  
+  for (const unit of units) {
+    const latest = await db.collection("forecastHistory")
+      .where("unit", "==", unit)
+      .orderBy("timestamp", "desc")
+      .limit(1)
+      .get();
+
+    if (!latest.empty) {
+      const data = latest.docs[0].data();
+      await db.collection("forecast_snapshots").add({
+        ...data,
+        snapshotDate: today.toISOString().slice(0, 10),
+        snapshotTimestamp: Date.now()
+      });
+      console.log(`  ✅ Snapshot taken for ${unit}`);
+    }
+  }
+}
+
 async function runIntegrityAudit() {
   try {
     const db = await getDb();
     await auditOpportunities(db);
     await auditProposals(db);
+    await takeForecastSnapshots(db);
     console.log("🏁 Integrity Audit Finished Successfully.");
   } catch (e) {
     console.error("❌ Integrity Audit Failed:", e);

@@ -203,19 +203,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
       
       // Double check Firestore profile existence on successful login
       const userDoc = await getDoc(doc(db, 'users', user.uid));
+      const profile: PortalUser = {
+        uid: user.uid,
+        firstName: match.firstName,
+        lastName: match.lastName,
+        email,
+        role: match.role as any
+      };
+
       if (!userDoc.exists()) {
         console.warn('Profile missing for authenticated user. Repairing...');
-        const profile: PortalUser = {
-          uid: user.uid,
-          firstName: match.firstName,
-          lastName: match.lastName,
-          email,
-          role: match.role as any
-        };
         await setDoc(doc(db, 'users', user.uid), profile);
         setPortalUser(profile);
       } else {
-        setPortalUser(userDoc.data() as PortalUser);
+        const existingData = userDoc.data() as PortalUser;
+        // Role Reconciliation: Ensure Firestore role matches whitelist
+        if (existingData.role !== match.role) {
+          console.info(`[Role Reconciliation] Updating role for ${match.firstName} ${match.lastName} from ${existingData.role} to ${match.role}`);
+          await setDoc(doc(db, 'users', user.uid), profile, { merge: true });
+          setPortalUser(profile);
+        } else {
+          setPortalUser(existingData);
+        }
       }
       
       toast.success(`Welcome, ${match.firstName}!`, {

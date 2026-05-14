@@ -196,6 +196,11 @@ async function startServer() {
 
     try {
       const results: any = {};
+      const auditLog: any = {
+        timestamp: Date.now(),
+        tasks: tasks,
+        details: []
+      };
       
       if (tasks.includes("integrity")) {
         console.log("[Maintenance] Running Integrity Audit...");
@@ -212,6 +217,7 @@ async function startServer() {
           }
         }
         results.integrity = { status: "ok", fixed: fixCount };
+        auditLog.details.push({ task: "integrity", fixed: fixCount });
       }
 
       if (tasks.includes("cleanup-alerts")) {
@@ -221,11 +227,27 @@ async function startServer() {
         alerts.docs.forEach((d: any) => batch.delete(d.ref));
         await batch.commit();
         results.cleanup = { status: "ok", deleted: alerts.size };
+        auditLog.details.push({ task: "cleanup-alerts", deleted: alerts.size });
       }
+
+      // Record in permanent system logs
+      await db.collection("system_logs").add({
+        ...auditLog,
+        type: "maintenance_audit",
+        status: "success"
+      });
 
       res.json({ status: "ok", results });
     } catch (e: any) {
       console.error("[Maintenance] Error:", e);
+      if (db) {
+        await db.collection("system_logs").add({
+          timestamp: Date.now(),
+          type: "maintenance_audit",
+          status: "failure",
+          error: e.message
+        });
+      }
       res.status(500).json({ error: e.message });
     }
   });

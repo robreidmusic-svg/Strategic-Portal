@@ -6,7 +6,7 @@ import { getKnowledgeNodes, ingestKnowledgeNode, type KnowledgeNode, globalNeura
 import { cn } from '../lib/utils';
 import { useApp } from '../context/AppContext';
 import { db } from '../firebase';
-import { collection, onSnapshot, query, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { collection, onSnapshot, query, deleteDoc, doc, orderBy, where, updateDoc } from 'firebase/firestore';
 import * as pdfjs from 'pdfjs-dist';
 import { toast } from 'sonner';
 import mammoth from 'mammoth';
@@ -666,9 +666,6 @@ export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?:
               <button 
                 onClick={async () => {
                   for (const alert of activeAlerts) {
-                    await updateKnowledgeNode(alert.id, { resolved: true }, "maintenance_alerts" as any); // hacky way to use existing service if it supports it, or just use firebase doc directly
-                    // Better: direct firebase call
-                    const { doc, updateDoc } = await import('firebase/firestore');
                     await updateDoc(doc(db, "maintenance_alerts", alert.id), { resolved: true });
                   }
                 }}

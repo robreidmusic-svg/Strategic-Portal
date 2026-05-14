@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { UNITS, FORECAST_MONTHS } from '../constants';
 import { Unit } from '../types';
-import { Upload, Database, Target, Save, AlertCircle, FileSpreadsheet, CheckCircle2, Trash2, Calendar, ChevronLeft, ChevronRight, Users, Sparkles, Loader2, BookOpen } from 'lucide-react';
+import { Upload, Database, Target, Save, AlertCircle, FileSpreadsheet, CheckCircle2, Trash2, Calendar, ChevronLeft, ChevronRight, Users, Sparkles, Loader2, BookOpen, ShieldCheck } from 'lucide-react';
 import { cn, formatCurrency } from '../lib/utils';
 import * as pdfjs from 'pdfjs-dist';
 
@@ -27,7 +27,8 @@ export function AdminPanel() {
     isKnowledgeBaseLoaded,
     legalKnowledgeBaseContent,
     updateLegalKnowledgeBase,
-    isLegalKnowledgeBaseLoaded
+    isLegalKnowledgeBaseLoaded,
+    portalUser
   } = useApp();
   const [dragActive, setDragActive] = useState(false);
   const [showConfirmDelete, setShowConfirmDelete] = useState(false);
@@ -238,7 +239,15 @@ export function AdminPanel() {
   return (
     <div className="space-y-16">
       <header className="border-b-4 border-app-text pb-12">
-        <p className="text-[10px] font-black text-app-muted uppercase tracking-[0.3em] mb-4">Command Center</p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-[10px] font-black text-app-muted uppercase tracking-[0.3em]">Command Center</p>
+          {portalUser?.firstName === 'Ed' && portalUser?.lastName === 'Wheeler' && (
+            <div className="flex items-center gap-2 px-4 py-1.5 bg-archival-terracotta/10 border border-archival-terracotta/20 rounded-full animate-pulse">
+              <ShieldCheck size={12} className="text-archival-terracotta" />
+              <span className="text-[9px] font-black text-archival-terracotta uppercase tracking-widest">Delegated Authority: Ed Wheeler</span>
+            </div>
+          )}
+        </div>
         <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
           <h2 className="text-5xl md:text-7xl font-black text-app-text tracking-[-0.04em] leading-[0.85] font-aptos uppercase">
             Admin<br />

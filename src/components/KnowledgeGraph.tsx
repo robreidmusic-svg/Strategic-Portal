@@ -2,6 +2,7 @@ import React, { useMemo, useEffect, useRef, useState } from 'react';
 import ForceGraph3D from 'react-force-graph-3d';
 import { KnowledgeNode } from '../services/researchService';
 import { MousePointer2 } from 'lucide-react';
+import * as THREE from 'three';
 
 const TYPE_COLORS: Record<string, string> = {
   operator: '#EAF2EA',

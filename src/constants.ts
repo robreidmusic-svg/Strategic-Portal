@@ -31,7 +31,7 @@ export const FORECAST_MONTHS = [
 
 export const WHITELISTED_USERS = [
   { firstName: 'Eva', lastName: 'Tsang', role: 'user' },
-  { firstName: 'Ed', lastName: 'Wheeler', role: 'user' },
+  { firstName: 'Ed', lastName: 'Wheeler', role: 'admin' },
   { firstName: 'Alfie', lastName: 'James', role: 'user' },
   { firstName: 'Abigail', lastName: 'Moore', role: 'user' },
   { firstName: 'Filaretos', lastName: 'Koutsogiannis', role: 'user' },
