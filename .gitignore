@@ -35,3 +35,10 @@ Thumbs.db
 # Project specific
 knowledge/
 output.log
+gcp-key.json
+*.json
+!package.json
+!tsconfig.json
+!firebase.json
+!firebase-applet-config.json
+!firebase-blueprint.json
