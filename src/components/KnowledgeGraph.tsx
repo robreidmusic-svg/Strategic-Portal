@@ -96,17 +96,54 @@ export function KnowledgeGraph({ nodes, onNodeClick }: KnowledgeGraphProps) {
         width={dimensions.width}
         height={dimensions.height}
         graphData={graphData}
+        nodeThreeObject={(node: any) => {
+          const group = new THREE.Group();
+          
+          // Main node sphere
+          const geometry = new THREE.SphereGeometry(node.val * 3);
+          const material = new THREE.MeshStandardMaterial({ 
+            color: node.color,
+            roughness: 0.3,
+            metalness: 0.2
+          });
+          const sphere = new THREE.Mesh(geometry, material);
+          group.add(sphere);
+
+          // Pulse effect ring
+          const pulseGeometry = new THREE.RingGeometry(node.val * 3.5, node.val * 4, 32);
+          const pulseMaterial = new THREE.MeshBasicMaterial({ 
+            color: '#D67B1B', // Archival Terracotta
+            transparent: true, 
+            opacity: 0.4,
+            side: THREE.DoubleSide 
+          });
+          const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
+          pulse.name = 'pulse';
+          group.add(pulse);
+
+          // Animation loop for pulse
+          const startTime = Date.now();
+          const animate = () => {
+            const elapsed = (Date.now() - startTime) / 1000;
+            const s = 1 + Math.sin(elapsed * 2) * 0.2;
+            pulse.scale.set(s, s, s);
+            pulse.material.opacity = 0.4 * (1 - (s - 0.8) / 0.4);
+            requestAnimationFrame(animate);
+          };
+          animate();
+
+          return group;
+        }}
         nodeLabel="name"
-        nodeColor="color"
         nodeRelSize={6}
         onNodeClick={handleNodeClick}
-        linkColor={(link: any) => link.linkType === 'backlink' ? '#8B5CF6' : 'rgba(74, 69, 62, 0.1)'}
+        linkColor={(link: any) => link.linkType === 'backlink' ? '#D67B1B' : 'rgba(74, 69, 62, 0.1)'}
         linkWidth={(link: any) => link.linkType === 'backlink' ? 3 : 1}
         linkDirectionalParticles={(link: any) => link.linkType === 'backlink' ? 4 : 0}
         linkDirectionalParticleWidth={2}
         linkDirectionalParticleSpeed={0.006}
         linkCurvature={(link: any) => link.linkType === 'backlink' ? 0.6 : 0}
-        backgroundColor="#F5F2EA"
+        backgroundColor="#FCFBF9"
         showNavInfo={false}
       />
 

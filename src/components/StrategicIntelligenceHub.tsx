@@ -725,13 +725,34 @@ export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?:
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:h-[850px] overflow-visible">
+        {/* Global Intelligence Ingestion Bar */}
+        {sessionDocs.length > 0 && (
+          <div className="w-full mt-8 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="paper-card py-3 px-6 bg-archival-sage/5 border-archival-sage/20 flex flex-wrap items-center gap-4 shadow-sm">
+              <div className="flex items-center gap-2 pr-4 border-r border-paper-border">
+                <Upload size={14} className="text-archival-terracotta" />
+                <span className="text-[10px] font-friendly font-black uppercase tracking-widest text-archival-ink">Active Ingestion</span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {sessionDocs.map((doc, idx) => (
+                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-white border border-paper-border rounded-lg group hover:border-archival-terracotta transition-all">
+                    <div className="w-1.5 h-1.5 rounded-full bg-archival-sage" />
+                    <span className="text-[9px] font-bold text-archival-ink uppercase truncate max-w-[150px]">{doc.name}</span>
+                    <button onClick={() => removeDoc(idx)} className="text-app-muted hover:text-rose-500"><X size={10} /></button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:h-[740px] overflow-visible mt-8">
           {/* Main Chat Interface */}
           <div className={cn(
             "flex flex-col relative z-10 paper-card bg-white/60 backdrop-blur-md transition-all duration-500 overflow-hidden",
             mode === 'predictor' ? "lg:col-span-6" : "lg:col-span-10 lg:col-start-2 xl:col-span-8 xl:col-start-3"
           )}>
-            <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 scrollbar-hide bg-app-bg/30">
+            <div className="flex-1 overflow-y-auto p-6 lg:p-10 space-y-10 scrollbar-hide bg-app-bg/30 max-h-[480px]">
               {messages[mode].length === 0 && (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-6 py-20 opacity-40">
                   <div className="w-24 h-24 rounded-full bg-orange-50 border border-orange-100 flex items-center justify-center text-[#F29023]">
@@ -960,61 +981,41 @@ export function StrategicIntelligenceHub({ initialMode = null }: { initialMode?:
                 </div>
               )}
 
-              {/* Moved Status Bar and Controls to Bottom Row */}
-              <div className="p-6 border-t border-paper-border bg-archival-parchment/10 flex flex-wrap items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <button 
-                    onClick={async () => {
-                      const count = await batchNormaliseKnowledge();
-                      toast.success(`Neural Resync Complete: ${count} nodes formatted.`);
-                    }}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-white border border-paper-border rounded-full text-[9px] font-friendly font-black uppercase tracking-widest text-app-muted hover:text-archival-terracotta hover:shadow-md transition-all shadow-[1px_1px_2px_rgba(0,0,0,0.05)]"
-                  >
-                    <RefreshCw size={12} /> Neural Resync
-                  </button>
-                  <button 
-                    onClick={() => setShowIngestionModal(true)}
-                    className="flex items-center gap-2 px-5 py-2.5 bg-archival-ink text-white border border-white/10 rounded-full text-[9px] font-friendly font-black uppercase tracking-widest hover:bg-archival-terracotta hover:shadow-md transition-all shadow-lg"
-                  >
-                    <Upload size={12} /> Add Intelligence
-                  </button>
+              {/* Compact Ingestion & Control Bar */}
+              <div className="p-4 border-t border-paper-border bg-archival-parchment/10 flex flex-col gap-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <button 
+                      onClick={async () => {
+                        const count = await batchNormaliseKnowledge();
+                        toast.success(`Neural Resync Complete: ${count} nodes formatted.`);
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-white border border-paper-border rounded-full text-[9px] font-friendly font-black uppercase tracking-widest text-app-muted hover:text-archival-terracotta transition-all shadow-sm"
+                    >
+                      <RefreshCw size={12} /> Resync
+                    </button>
+                    <button 
+                      onClick={() => setShowIngestionModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 bg-archival-ink text-white rounded-full text-[9px] font-friendly font-black uppercase tracking-widest hover:bg-archival-terracotta transition-all shadow-lg"
+                    >
+                      <Plus size={12} /> Intelligence
+                    </button>
+                  </div>
+
+                  <div className="flex items-center gap-2 px-4 py-2 rounded-full border border-paper-border bg-white/60">
+                    <div className="w-1.5 h-1.5 rounded-full bg-archival-sage animate-pulse" />
+                    <span className="text-[8px] font-friendly font-black uppercase tracking-widest text-archival-ink">
+                      {knowledgeNodes.length} Nodes
+                    </span>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-3 px-5 py-2.5 rounded-full border border-paper-border bg-white shadow-[1px_1px_2px_rgba(0,0,0,0.05)]">
-                  <div className="w-2 h-2 rounded-full bg-archival-sage animate-pulse" />
-                  <p className="text-[9px] font-friendly font-bold uppercase tracking-widest text-archival-ink">
-                    Live Neural Feed: {knowledgeNodes.length} Nodes Synchronized
-                  </p>
-                </div>
+                {/* Session Ingestion Flow (Inline) removed - moved to global bar */}
               </div>
             </div>
-            
-            {/* Session Ingestion Panel (Moved here) */}
-            {sessionDocs.length > 0 && (
-              <div className="paper-card p-6 bg-archival-sage/5 border-archival-sage/20 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                <h5 className="text-[10px] font-friendly font-black uppercase tracking-widest text-archival-ink mb-4 flex items-center gap-2">
-                  <Upload size={12} className="text-archival-terracotta" /> Active Intelligence Ingestion
-                </h5>
-                <div className="flex flex-wrap gap-3">
-                  {sessionDocs.map((doc, idx) => (
-                    <div key={idx} className="flex items-center gap-3 px-4 py-2 bg-white border border-paper-border rounded-xl shadow-sm group hover:border-archival-terracotta transition-all">
-                      <div className="w-2 h-2 rounded-full bg-archival-terracotta/40" />
-                      <span className="text-[10px] font-bold text-archival-ink uppercase tracking-wider truncate max-w-[200px]">{doc.name}</span>
-                      <button 
-                        type="button" 
-                        onClick={() => removeDoc(idx)} 
-                        className="text-app-muted hover:text-rose-500 transition-colors"
-                      >
-                        <Trash2 size={12} />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
-            {/* Strategic Synthesis Feed (Mini) */}
-            <div className="flex-1 min-h-[320px] paper-card p-8 overflow-hidden flex flex-col">
+            {/* Strategic Synthesis Feed (Compact) */}
+            <div className="h-[180px] paper-card p-6 overflow-hidden flex flex-col shadow-lg">
               <h5 className="text-[11px] font-friendly font-black uppercase tracking-widest text-archival-ink flex items-center gap-2 mb-6">
                 <Brain size={14} className="text-archival-terracotta" /> Synthesis Stream
               </h5>
