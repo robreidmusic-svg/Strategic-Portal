@@ -109,28 +109,16 @@ export function KnowledgeGraph({ nodes, onNodeClick }: KnowledgeGraphProps) {
           const sphere = new THREE.Mesh(geometry, material);
           group.add(sphere);
 
-          // Pulse effect ring
-          const pulseGeometry = new THREE.RingGeometry(node.val * 3.5, node.val * 4, 32);
+          // Pulse effect ring (Static glowing aura instead of loop for stability)
+          const pulseGeometry = new THREE.RingGeometry(node.val * 3.5, node.val * 5, 32);
           const pulseMaterial = new THREE.MeshBasicMaterial({ 
             color: '#D67B1B', // Archival Terracotta
             transparent: true, 
-            opacity: 0.4,
+            opacity: 0.2,
             side: THREE.DoubleSide 
           });
           const pulse = new THREE.Mesh(pulseGeometry, pulseMaterial);
-          pulse.name = 'pulse';
           group.add(pulse);
-
-          // Animation loop for pulse
-          const startTime = Date.now();
-          const animate = () => {
-            const elapsed = (Date.now() - startTime) / 1000;
-            const s = 1 + Math.sin(elapsed * 2) * 0.2;
-            pulse.scale.set(s, s, s);
-            pulse.material.opacity = 0.4 * (1 - (s - 0.8) / 0.4);
-            requestAnimationFrame(animate);
-          };
-          animate();
 
           return group;
         }}
