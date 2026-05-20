@@ -31,7 +31,8 @@ import {
   deleteDoc,
   doc
 } from 'firebase/firestore';
-import { db } from '../firebase';
+import { db, storage } from '../firebase';
+import { ref, uploadBytesResumable, getDownloadURL } from 'firebase/storage';
 import { useApp } from '../context/AppContext';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -61,7 +62,10 @@ export function ContentLibrary() {
   // Form States
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
-  const [newType, setNewType] = useState<'folder' | 'link'>('folder');
+  const [newType, setNewType] = useState<'folder' | 'link' | 'file'>('folder');
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const currentFolderId = currentPath.length > 0 ? currentPath[currentPath.length - 1].id : null;
 
@@ -120,7 +124,43 @@ export function ContentLibrary() {
     e.preventDefault();
     if (!newName.trim()) return;
 
+    if (newType === 'file' && !uploadFile) {
+      toast.error('Please select a file to upload.');
+      return;
+    }
+
     try {
+      let finalUrl = '';
+
+      if (newType === 'file' && uploadFile) {
+        setIsUploading(true);
+        const storageRef = ref(storage, `content_library/${Date.now()}_${uploadFile.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, uploadFile);
+
+        await new Promise<void>((resolve, reject) => {
+          uploadTask.on(
+            'state_changed',
+            (snapshot) => {
+              const progress = (snapshot.bytesTransferred / snapshot.totalBytes) * 100;
+              setUploadProgress(Math.round(progress));
+            },
+            (error) => {
+              console.error('Upload failed:', error);
+              setIsUploading(false);
+              reject(error);
+            },
+            async () => {
+              try {
+                finalUrl = await getDownloadURL(uploadTask.snapshot.ref);
+                resolve();
+              } catch (err) {
+                reject(err);
+              }
+            }
+          );
+        });
+      }
+
       const payload: any = {
         name: newName.trim(),
         parentId: currentFolderId,
@@ -129,7 +169,9 @@ export function ContentLibrary() {
         createdBy: portalUser?.uid || 'unknown'
       };
 
-      if (newType === 'link' && newUrl) {
+      if (newType === 'file') {
+        payload.url = finalUrl;
+      } else if (newType === 'link' && newUrl) {
         payload.url = newUrl.startsWith('http') ? newUrl : `https://${newUrl}`;
         // Auto-detect YouTube
         if (payload.url.includes('youtube.com') || payload.url.includes('youtu.be')) {
@@ -141,11 +183,16 @@ export function ContentLibrary() {
       
       setNewName('');
       setNewUrl('');
+      setUploadFile(null);
+      setUploadProgress(null);
+      setIsUploading(false);
       setShowNewFolderModal(false);
       setShowNewAssetModal(false);
-      toast.success(`${newType === 'folder' ? 'Folder' : 'Asset'} created successfully.`);
+      toast.success(`${newType === 'folder' ? 'Folder' : newType === 'file' ? 'File' : 'Asset'} created successfully.`);
     } catch (error) {
-      toast.error('Failed to create item.');
+      console.error(error);
+      toast.error(newType === 'file' ? 'Failed to upload file. Make sure storage is enabled in Firebase.' : 'Failed to create item.');
+      setIsUploading(false);
     }
   };
 
@@ -162,7 +209,7 @@ export function ContentLibrary() {
   };
 
   const navigateTo = (item: LibraryItem) => {
-    if (item.type === 'link' || item.type === 'youtube') {
+    if (item.type === 'link' || item.type === 'youtube' || item.type === 'file') {
       if (item.url) window.open(item.url, '_blank');
       return;
     }
@@ -184,6 +231,7 @@ export function ContentLibrary() {
       case 'youtube': return <Youtube className="text-red-500" size={18} />;
       case 'random': return <Archive className="text-archival-oxide" size={18} />;
       case 'link': return <LinkIcon className="text-blue-500" size={18} />;
+      case 'file': return <FileText className="text-archival-terracotta" size={18} />;
       default: return <Folder className="text-archival-terracotta/60" size={18} />;
     }
   };
@@ -334,10 +382,12 @@ export function ContentLibrary() {
               </h3>
               
               <div className="flex items-center gap-2 mt-auto">
-                {item.type === 'link' || item.type === 'youtube' ? (
+                {item.type === 'link' || item.type === 'youtube' || item.type === 'file' ? (
                   <div className="flex items-center gap-1.5">
                     <ExternalLink size={10} className="text-archival-terracotta" />
-                    <span className="text-[8px] font-black font-mono text-archival-terracotta uppercase tracking-widest">Open External</span>
+                    <span className="text-[8px] font-black font-mono text-archival-terracotta uppercase tracking-widest">
+                      {item.type === 'file' ? 'Open Archive' : 'Open External'}
+                    </span>
                   </div>
                 ) : (
                   <>
@@ -379,15 +429,48 @@ export function ContentLibrary() {
             </div>
             
             <form onSubmit={handleCreateItem} className="p-8 space-y-6">
+              {newType !== 'folder' && (
+                <div className="flex bg-archival-parchment p-1 rounded-xl border border-archival-parchment/50 mb-4">
+                  <button
+                    type="button"
+                    disabled={isUploading}
+                    onClick={() => {
+                      setNewType('link');
+                      setUploadFile(null);
+                    }}
+                    className={cn(
+                      "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer",
+                      newType === 'link' ? "bg-white text-archival-ink shadow-sm" : "text-archival-oxide hover:text-archival-ink"
+                    )}
+                  >
+                    Web Link
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isUploading}
+                    onClick={() => {
+                      setNewType('file');
+                    }}
+                    className={cn(
+                      "flex-1 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer",
+                      newType === 'file' ? "bg-white text-archival-ink shadow-sm" : "text-archival-oxide hover:text-archival-ink"
+                    )}
+                  >
+                    File Upload
+                  </button>
+                </div>
+              )}
+
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase tracking-widest text-archival-oxide">Display Name</label>
                 <input
                   autoFocus
                   type="text"
+                  disabled={isUploading}
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder={newType === 'folder' ? "e.g. Q4 Competitor Analysis" : "e.g. Strategic Onboarding Video"}
-                  className="w-full px-6 py-4 bg-archival-parchment rounded-2xl border border-archival-parchment focus:border-archival-terracotta/40 focus:ring-4 focus:ring-archival-terracotta/5 outline-none transition-all font-friendly text-sm"
+                  className="w-full px-6 py-4 bg-archival-parchment rounded-2xl border border-archival-parchment focus:border-archival-terracotta/40 focus:ring-4 focus:ring-archival-terracotta/5 outline-none transition-all font-friendly text-sm disabled:opacity-50"
                 />
               </div>
 
@@ -396,27 +479,80 @@ export function ContentLibrary() {
                   <label className="text-[10px] font-black uppercase tracking-widest text-archival-oxide">Resource URL</label>
                   <input
                     type="text"
+                    disabled={isUploading}
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
                     placeholder="https://youtube.com/..."
-                    className="w-full px-6 py-4 bg-archival-parchment rounded-2xl border border-archival-parchment focus:border-archival-terracotta/40 focus:ring-4 focus:ring-archival-terracotta/5 outline-none transition-all font-friendly text-sm"
+                    className="w-full px-6 py-4 bg-archival-parchment rounded-2xl border border-archival-parchment focus:border-archival-terracotta/40 focus:ring-4 focus:ring-archival-terracotta/5 outline-none transition-all font-friendly text-sm disabled:opacity-50"
                   />
+                </div>
+              )}
+
+              {newType === 'file' && (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-archival-oxide">Select File</label>
+                    <div className="relative border-2 border-dashed border-archival-parchment rounded-2xl p-6 hover:border-archival-terracotta/40 transition-colors flex flex-col items-center justify-center bg-archival-parchment/20">
+                      <input
+                        type="file"
+                        disabled={isUploading}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null;
+                          setUploadFile(file);
+                          if (file && !newName) {
+                            setNewName(file.name.substring(0, file.name.lastIndexOf('.')) || file.name);
+                          }
+                        }}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      />
+                      <FolderPlus className="text-archival-terracotta/40 mb-2" size={32} />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-archival-ink text-center break-all px-2">
+                        {uploadFile ? uploadFile.name : 'Click or Drag File Here'}
+                      </span>
+                      {uploadFile && (
+                        <span className="text-[8px] font-mono text-archival-oxide uppercase tracking-widest mt-1">
+                          {(uploadFile.size / 1024 / 1024).toFixed(2)} MB
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  {isUploading && uploadProgress !== null && (
+                    <div className="space-y-1">
+                      <div className="flex justify-between items-center text-[8px] font-black font-mono text-archival-oxide uppercase tracking-widest">
+                        <span>Uploading Archive...</span>
+                        <span>{uploadProgress}%</span>
+                      </div>
+                      <div className="h-1.5 w-full bg-archival-parchment rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-archival-terracotta transition-all duration-300" 
+                          style={{ width: `${uploadProgress}%` }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
               
               <div className="flex items-center gap-4 pt-4">
                 <button
                   type="button"
-                  onClick={() => { setShowNewFolderModal(false); setShowNewAssetModal(false); }}
-                  className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-archival-oxide hover:bg-archival-parchment rounded-2xl transition-all"
+                  disabled={isUploading}
+                  onClick={() => { 
+                    setShowNewFolderModal(false); 
+                    setShowNewAssetModal(false); 
+                    setUploadFile(null); 
+                    setUploadProgress(null); 
+                  }}
+                  className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-archival-oxide hover:bg-archival-parchment rounded-2xl transition-all disabled:opacity-50"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-4 bg-archival-ink text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-archival-terracotta transition-all shadow-xl shadow-black/20"
+                  disabled={isUploading}
+                  className="flex-1 py-4 bg-archival-ink text-white text-[10px] font-black uppercase tracking-widest rounded-2xl hover:bg-archival-terracotta transition-all shadow-xl shadow-black/20 disabled:opacity-50 cursor-pointer"
                 >
-                  Commit to Archive
+                  {isUploading ? 'Uploading...' : 'Commit to Archive'}
                 </button>
               </div>
             </form>

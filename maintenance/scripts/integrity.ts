@@ -1,48 +1,63 @@
 import { getDb } from "./db";
 
+// Set MAINTENANCE_DRY_RUN=true in .env to audit without committing any changes.
+const DRY_RUN = process.env.MAINTENANCE_DRY_RUN === "true";
+if (DRY_RUN) console.log("🧪 DRY RUN MODE — No changes will be committed to Firestore.");
+
 async function auditOpportunities(db: any) {
   console.log("🔍 Auditing Opportunities...");
   const snapshot = await db.collection("opportunities").get();
+  const batch = db.batch();
   let fixCount = 0;
 
   for (const doc of snapshot.docs) {
     const data = doc.data();
     const updates: any = {};
 
-    if (!data.stage) updates.stage = "Lead";
+    // Use strict undefined/null checks to avoid overwriting intentionally empty values.
+    if (data.stage === undefined || data.stage === null) updates.stage = "Lead";
     if (data.mrc === undefined) updates.mrc = 0;
     if (data.isIncludedInCall === undefined) updates.isIncludedInCall = false;
-    if (!data.forecastMonth) updates.forecastMonth = new Date().toISOString().slice(0, 7);
+    if (data.forecastMonth === undefined || data.forecastMonth === null)
+      updates.forecastMonth = new Date().toISOString().slice(0, 7);
 
     if (Object.keys(updates).length > 0) {
-      console.log(`  🔧 Auto-fixing Opportunity ${doc.id}:`, updates);
-      await doc.ref.update(updates);
+      console.log(`  🔧 ${DRY_RUN ? "[DRY RUN] Would fix" : "Auto-fixing"} Opportunity ${doc.id}:`, updates);
+      if (!DRY_RUN) batch.update(doc.ref, updates);
       fixCount++;
     }
   }
-  console.log(`✅ Opportunities Audit Complete. Fixed: ${fixCount}`);
+
+  // Atomic commit — all fixes applied together or not at all.
+  if (!DRY_RUN) await batch.commit();
+  console.log(`✅ Opportunities Audit Complete. ${DRY_RUN ? "Would fix" : "Fixed"}: ${fixCount}`);
 }
 
 async function auditProposals(db: any) {
   console.log("🔍 Auditing Research Proposals...");
   const snapshot = await db.collection("research_proposals").get();
+  const batch = db.batch();
   let fixCount = 0;
 
   for (const doc of snapshot.docs) {
     const data = doc.data();
     const updates: any = {};
 
-    if (!data.status) updates.status = "pending";
-    if (!data.createdAt) updates.createdAt = Date.now();
-    if (!data.scope) updates.scope = "Quick";
+    // Use strict undefined/null checks to avoid overwriting intentionally empty values.
+    if (data.status === undefined || data.status === null) updates.status = "pending";
+    if (data.createdAt === undefined || data.createdAt === null) updates.createdAt = Date.now();
+    if (data.scope === undefined || data.scope === null) updates.scope = "Quick";
 
     if (Object.keys(updates).length > 0) {
-      console.log(`  🔧 Auto-fixing Proposal ${doc.id}:`, updates);
-      await doc.ref.update(updates);
+      console.log(`  🔧 ${DRY_RUN ? "[DRY RUN] Would fix" : "Auto-fixing"} Proposal ${doc.id}:`, updates);
+      if (!DRY_RUN) batch.update(doc.ref, updates);
       fixCount++;
     }
   }
-  console.log(`✅ Proposals Audit Complete. Fixed: ${fixCount}`);
+
+  // Atomic commit — all fixes applied together or not at all.
+  if (!DRY_RUN) await batch.commit();
+  console.log(`✅ Proposals Audit Complete. ${DRY_RUN ? "Would fix" : "Fixed"}: ${fixCount}`);
 }
 
 async function takeForecastSnapshots(db: any) {

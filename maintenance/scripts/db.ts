@@ -14,33 +14,37 @@ let db: any = null;
 export async function getDb() {
   if (db) return db;
 
+  const firebaseConfigPath = path.join(rootDir, "firebase-applet-config.json");
+  let projectId: string | undefined;
+  let firestoreDatabaseId: string | undefined;
+
+  if (fs.existsSync(firebaseConfigPath)) {
+    try {
+      const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
+      projectId = firebaseConfig.projectId;
+      firestoreDatabaseId = firebaseConfig.firestoreDatabaseId;
+    } catch (e) {
+      console.error("Error reading firebase-applet-config.json:", e);
+    }
+  }
+
   const apps = (admin as any).apps || (admin as any).default?.apps || [];
   if (apps.length === 0) {
-    try {
-      if ((admin as any).initializeApp) {
-        admin.initializeApp();
-      } else if ((admin as any).default?.initializeApp) {
-        (admin as any).default.initializeApp();
+    if ((admin as any).initializeApp) {
+      if (projectId) {
+        (admin as any).initializeApp({ projectId });
+      } else {
+        (admin as any).initializeApp();
       }
-    } catch (e) {
-      const firebaseConfigPath = path.join(rootDir, "firebase-applet-config.json");
-      if (fs.existsSync(firebaseConfigPath)) {
-        const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
-        const initApp = (admin as any).initializeApp || (admin as any).default?.initializeApp;
-        if (initApp) {
-          initApp({ projectId: firebaseConfig.projectId });
-        }
+    } else if ((admin as any).default?.initializeApp) {
+      if (projectId) {
+        (admin as any).default.initializeApp({ projectId });
+      } else {
+        (admin as any).default.initializeApp();
       }
     }
   }
 
-  const firebaseConfigPath = path.join(rootDir, "firebase-applet-config.json");
-  if (fs.existsSync(firebaseConfigPath)) {
-    const firebaseConfig = JSON.parse(fs.readFileSync(firebaseConfigPath, "utf-8"));
-    db = firebaseConfig.firestoreDatabaseId ? getFirestore(firebaseConfig.firestoreDatabaseId) : getFirestore();
-  } else {
-    db = getFirestore();
-  }
-
+  db = firestoreDatabaseId ? getFirestore(firestoreDatabaseId) : getFirestore();
   return db;
 }
